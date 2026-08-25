@@ -1,0 +1,229 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+    // GameTest サーバー用: tempad（manifest required）一式。
+    // run-gametest/mods/ へ Copy して FML の ModsFolderLocator に発見させる
+    // （dev ランの mod 発見は supplied coordinates と mods/ フォルダのみのため）
+    gametestHostMods
+}
+
+// run-gametest/mods/ へ tempad 一式を投入するタスク（gameTestServer の taskBefore）
+var copyGametestHostMods = tasks.register('copyGametestHostMods', Copy) {
+    from configurations.gametestHostMods
+    into layout.projectDirectory.dir('run-gametest/mods')
+}
+
+sourceSets {
+    // GameTest は出荷 jar の外へ（PLAYBOOK_GAMETEST Phase 1）
+    gametest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        "${mod_id}_gametest" {
+            sourceSet(sourceSets.gametest)
+        }
+    }
+
+    runs {
+        client {
+            client()
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            loadedMods = [project.neoForge.mods.getByName(mod_id)]
+        }
+
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            // manifest required の tempad を GameTest サーバーにも載せる。
+            // MDG dev ランの mod 発見は「supplied mod coordinates（mods モデル）」と
+            // 「ゲームディレクトリの mods/ フォルダ」だけなので、専用 gameDirectory を
+            // 作りそこへ tempad 一式を Copy タスクで投入する（client の run/mods と分離）。
+            gameDirectory = project.file('run-gametest')
+            taskBefore(copyGametestHostMods)
+            loadedMods = [project.neoForge.mods.getByName(mod_id),
+                          project.neoForge.mods.getByName("${mod_id}_gametest")]
+        }
+    }
+
+    addModdingDependenciesTo sourceSets.gametest
+}
+
+repositories {
+    // Terrarium / Resourceful 関係 (Tempad とその API 型)
+    maven {
+        name = "Terrarium (Resourceful Bees)"
+        url = "https://maven.resourcefulbees.com/repository/terrarium/"
+    }
+    maven {
+        name = "TeamResourceful"
+        url = "https://maven.teamresourceful.com/repository/maven-public/"
+    }
+    // Modrinth maven (runClient 用本体 jar・xaeros-minimap 含む)
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+}
+
+dependencies {
+    // Tempad: 地点データの供給源（overworld attachment player_points の読み取り）。
+    // Gradle module metadata 経由で apiElements=tempad-*-dev.jar + kotlin-stdlib が解決される。
+    compileOnly("earth.terrarium:tempad-1.21.1:${tempad_version}")
+    // NamedGlobalVec3#getColor() の戻り値型（resourcefullib Color）が compile classpath に要る
+    compileOnly("com.teamresourceful.resourcefullib:resourcefullib-neoforge-1.21:3.0.12")
+
+    // ─── runClient 用ローカルランタイム（published jar には漏らさない）───
+    // Xaero's Minimap 本体。Reflection 呼び出しのため compileOnly / 依存宣言は不要
+    localRuntime "maven.modrinth:xaeros-minimap:${xaeros_version}"
+    // Tempad 本体とその必須ランタイム依存（Modrinth 1.21.1 neoforge 実在確認済み・mod-075 実績値）
+    localRuntime "maven.modrinth:tempad:${tempad_version}"
+    localRuntime "maven.modrinth:kotlin-for-forge:5.7.0"
+    localRuntime "maven.modrinth:resourceful-lib:3.0.12"
+    localRuntime "maven.modrinth:resourceful-config:3.0.10"
+
+    // ─── GameTest サーバー専用: Tempad 一式（required 依存の充足）───
+    // FML はクラスパス上の mods.toml 付き jar を発見する（ignoreList 方式）
+    gametestHostMods "maven.modrinth:tempad:${tempad_version}"
+    gametestHostMods "maven.modrinth:kotlin-for-forge:5.7.0"
+    gametestHostMods "maven.modrinth:resourceful-lib:3.0.12"
+    gametestHostMods "maven.modrinth:resourceful-config:3.0.10"
+
+    // 差分同期エンジンの単体テスト（純粋関数＝MC クラスパス不要）
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            tempad_version         : tempad_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_description        : mod_description,
+            mod_authors            : mod_authors,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+// gametest companion 用はリテラルで書く（expand 掛からないため）
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// 出荷 jar に GameTest/UnitTest の足場が混入していないことを機械検査する
+// （PLAYBOOK_GAMETEST Phase 1・mod-066 の multiloader 版を single-project 向けに移植）
+def verifyNoTestScaffoldingInJar = tasks.register("verifyNoTestScaffoldingInJar") {
+    group = 'verification'
+    description = 'Fails if test scaffolding leaked into the published jar.'
+    dependsOn tasks.named('jar')
+
+    doLast {
+        def jarFile = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def bad = []
+        jarFile.withInputStream { ins ->
+            def jis = new java.util.jar.JarInputStream(ins)
+            java.util.jar.JarEntry entry
+            while ((entry = jis.nextJarEntry) != null) {
+                def name = entry.name
+                if (name.contains('gametest') || name =~ /tests?\// || name.endsWith('Test.class') || name.endsWith('Tests.class')) {
+                    bad << name
+                }
+                if (name.endsWith('.class')) {
+                    def bytes = jis.readAllBytes()
+                    def pool = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1)
+                    ['net/minecraft/gametest', 'RegisterGameTestsEvent', 'GameTestInstance', 'GameTestHelper', 'TEST_INSTANCE'].each { marker ->
+                        if (pool.contains(marker)) bad << "${name} [refs ${marker}]"
+                    }
+                }
+            }
+        }
+        if (bad) {
+            throw new GradleException("Test scaffolding found in ${jarFile.name}:\n  " + bad.join('\n  '))
+        }
+        println "verifyNoTestScaffoldingInJar: OK (${jarFile.name})"
+    }
+}
+
+tasks.named('check') {
+    dependsOn verifyNoTestScaffoldingInJar
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

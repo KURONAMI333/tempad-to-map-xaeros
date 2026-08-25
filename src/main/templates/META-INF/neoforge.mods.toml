@@ -1,0 +1,42 @@
+# Tempad to Map: Xaero's edition - neoforge.mods.toml
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/KURONAMI333/tempad-to-map-xaeros/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+logoFile="logo.png"
+displayURL="https://github.com/KURONAMI333/tempad-to-map-xaeros"
+description='''
+${mod_description}
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+# Tempad: 機能の供給源（overworld attachment player_points の読み取り）。
+# サーバー側でも attachment を読むため side 制約は掛けない（両 dist で required）。
+[[dependencies.${mod_id}]]
+    modId="tempad"
+    type="required"
+    versionRange="[${tempad_version},)"
+    ordering="AFTER"
+
+# Xaero's Minimap: 依存宣言しない（XAERO_NOTES §公式依存宣言は不要）。
+# Reflection 直叩きのため jar を参照せず、不在時は静かに何もしない
+# （Tempad 地点の同期はサーバー側で完結し、クライアント反映だけが no-op になる）。
