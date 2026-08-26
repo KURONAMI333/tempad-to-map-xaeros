@@ -25,7 +25,7 @@ needed only on clients that should display the waypoints.
 1. Install NeoForge 21.1.x for Minecraft 1.21.1.
 2. Install [Tempad 3.x](https://modrinth.com/mod/tempad) on the client and server.
 3. Install [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) on the client.
-4. Put `tempadtomapx-0.1.0.jar` in the `mods` folder on each required side.
+4. Put `tempadtomapx-0.1.0+neoforge-1.21.1.jar` in the `mods` folder on each required side.
 
 ## Dependencies
 
