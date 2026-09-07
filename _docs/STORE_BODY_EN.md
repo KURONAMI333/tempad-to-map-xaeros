@@ -1,54 +1,23 @@
-# Tempad to Map: Xaero's edition
+See every saved Tempad teleport location on Xaero's Minimap without copying coordinates by hand.
 
-> See every Tempad teleport location on Xaero's Minimap without copying coordinates by hand.
+Tempad to Map keeps each player's Xaero's waypoints matched to their own Tempad locations. Creating, renaming, moving, or deleting a Tempad location updates the corresponding waypoint automatically within a few seconds.
 
-Tempad keeps your saved teleport locations in one place, while Xaero's
-Minimap is where you navigate. This addon sends each player's own Tempad
-locations from the server and keeps matching waypoints up to date.
+## Features
 
-- Adds Tempad locations to Xaero's Minimap as persistent waypoints.
+- Adds Tempad locations as persistent Xaero's Minimap waypoints.
 - Syncs additions, changes, and removals automatically.
-- Works in single-player, LAN, and dedicated-server worlds.
-- Sends only each player's own locations.
-
-## Supported loaders / versions
-
-| Minecraft | NeoForge |
-|---|:---:|
-| 1.21.1 | ✅ |
-
-Install this mod and Tempad on both the client and server. Xaero's Minimap is
-needed only on clients that should display the waypoints.
-
-## Install
-
-1. Install NeoForge 21.1.x for Minecraft 1.21.1.
-2. Install [Tempad 3.x](https://modrinth.com/mod/tempad) on the client and server.
-3. Install [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) on the client.
-4. Put `tempadtomapx-0.1.0+neoforge-1.21.1.jar` in the `mods` folder on each required side.
+- Sends only the current player's saved locations.
 
 ## Dependencies
 
-- Required: [Tempad](https://modrinth.com/mod/tempad) 3.x on the client and server.
-- Optional client display: [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap).
+[Tempad](https://modrinth.com/mod/tempad) 3.x is required. [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) is optional; without it, there is nowhere to display the synced waypoints.
 
-## Usage
+## Scope and limitations
 
-Create, edit, or delete a location in Tempad. The corresponding Xaero's
-Minimap waypoint is added, updated, or removed automatically within a few
-seconds.
+Synchronization is one-way from Tempad to Xaero's Minimap. Editing a Xaero's waypoint does not change Tempad. Xaero's Minimap exposes only the current dimension's waypoint set, so locations in other dimensions are applied when the player enters them.
 
-## Scope & limitations
+All Rights Reserved. Modpack inclusion is allowed without permission or credit.
 
-This is one-way synchronization from Tempad to Xaero's Minimap. Editing a
-waypoint in Xaero's Minimap does not change Tempad. Xaero's Minimap can expose
-only the current dimension's waypoint set, so locations in other dimensions
-are applied when the player enters them.
+Bugs and questions: comment on the CurseForge page, or DM @kuronami333 on X.
 
-## License & credits
-
-All Rights Reserved. Free to put in any modpack, on any platform, monetised or
-not - no permission needed, no credit required. Source is published so you can
-read exactly what it does.
-
-Author: KURONAMI
+[Source](https://github.com/KURONAMI333/tempad-to-map-xaeros)
