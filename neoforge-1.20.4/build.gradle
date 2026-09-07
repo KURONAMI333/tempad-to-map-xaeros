@@ -1,0 +1,127 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+neoForge {
+    version = project.neo_version
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+
+    runs {
+        client {
+            client()
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+}
+
+repositories {
+    // Modrinth maven (Tempad 実配布 jar・Xaero 本体)
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+    maven {
+        name = "TeamResourceful"
+        url = "https://maven.teamresourceful.com/repository/maven-public/"
+    }
+}
+
+dependencies {
+    // Tempad 2.x: 読取対象。NeoForge 1.20.4 実物は Mojmap 名のため deobf 不要の直参照
+    compileOnly("maven.modrinth:tempad:${tempad_version_id}")
+    // TempadLocationHandler の親クラス（resourcefullib SaveHandler）解決に要る（tempad 2.x の required 依存）
+    compileOnly("com.teamresourceful.resourcefullib:resourcefullib-neoforge-1.20.4:${resourcefullib_version}")
+
+    // 差分同期エンジンの単体テスト（純粋関数＝MC クラスパス不要）
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            tempad_version         : tempad_version_id,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_description        : mod_description,
+            mod_authors            : mod_authors,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// 出荷 jar にテスト用足場が混入していないことを機械検査する（root セルと同型のゲート）
+def verifyNoTestScaffoldingInJar = tasks.register("verifyNoTestScaffoldingInJar") {
+    group = 'verification'
+    description = 'Fails if test scaffolding leaked into the published jar.'
+    dependsOn tasks.named('jar')
+
+    doLast {
+        def jarFile = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def bad = []
+        jarFile.withInputStream { ins ->
+            def jis = new java.util.jar.JarInputStream(ins)
+            java.util.jar.JarEntry entry
+            while ((entry = jis.nextJarEntry) != null) {
+                def name = entry.name
+                if (name.contains('gametest') || name =~ /tests?\// || name.endsWith('Test.class') || name.endsWith('Tests.class')) {
+                    bad << name
+                }
+            }
+        }
+        if (bad) {
+            throw new GradleException("Test scaffolding found in ${jarFile.name}:\n  " + bad.join('\n  '))
+        }
+        println "verifyNoTestScaffoldingInJar: OK (${jarFile.name})"
+    }
+}
+
+tasks.named('check') {
+    dependsOn verifyNoTestScaffoldingInJar
+}
+
+// LICENSE jar 同梱（LICENSE は repo root にのみ置く。inputs.file で不在時に build を落とす）
+def licenseFile = file('../LICENSE')
+def licenseRenamed = "LICENSE_${mod_id}"
+tasks.named('jar', Jar).configure {
+    inputs.file(licenseFile)
+    from(licenseFile) { rename { licenseRenamed } }
+}

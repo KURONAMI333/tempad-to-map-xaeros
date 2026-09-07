@@ -1,0 +1,114 @@
+plugins {
+    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+repositories {
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+    maven {
+        name = "TeamResourceful"
+        url = "https://maven.teamresourceful.com/repository/maven-public/"
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+
+    // Tempad 2.x: 読取対象。common.data.TempadLocationHandler / LocationData への直参照
+    // （public static・リフレクション不要だが公開 API 保証外）。実配布 jar をそのまま compile に載せる
+    modCompileOnly "maven.modrinth:tempad:${tempad_version_id}"
+    // TempadLocationHandler の親クラス（resourcefullib SaveHandler）解決に要る（tempad 2.x の required 依存）。
+    // modCompileOnly で Loom の remap を通す（実物は中間名の production jar なため直置きだと class_18 不在で落ちる）
+    modCompileOnly "com.teamresourceful.resourcefullib:resourcefullib-fabric-1.20.1:${resourcefullib_version}"
+
+    // Xaero's Minimap は Reflection のため依存宣言なし。dev 実機確認用のみ（公開 jar には漏れない）
+    modRuntimeOnly "maven.modrinth:xaeros-minimap:${xaeros_minimap_version_id}"
+
+    // 差分同期エンジンの単体テスト（純粋関数＝MC クラスパス不要）
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": minecraft_version,
+                "loader_version": loader_version,
+                "fabric_version": fabric_version,
+                "mod_id": mod_id,
+                "mod_name": mod_name,
+                "mod_description": mod_description,
+                "mod_authors": mod_authors,
+                "mod_license": mod_license
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 17
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+// 出荷 jar にテスト用足場が混入していないことを機械検査する（root セルと同型のゲート）
+def verifyNoTestScaffoldingInJar = tasks.register("verifyNoTestScaffoldingInJar") {
+    group = 'verification'
+    description = 'Fails if test scaffolding leaked into the published jar.'
+    dependsOn tasks.named('jar')
+
+    doLast {
+        def jarFile = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def bad = []
+        jarFile.withInputStream { ins ->
+            def jis = new java.util.jar.JarInputStream(ins)
+            java.util.jar.JarEntry entry
+            while ((entry = jis.nextJarEntry) != null) {
+                def name = entry.name
+                if (name.contains('gametest') || name =~ /tests?\// || name.endsWith('Test.class') || name.endsWith('Tests.class')) {
+                    bad << name
+                }
+            }
+        }
+        if (bad) {
+            throw new GradleException("Test scaffolding found in ${jarFile.name}:\n  " + bad.join('\n  '))
+        }
+        println "verifyNoTestScaffoldingInJar: OK (${jarFile.name})"
+    }
+}
+
+tasks.named('check') {
+    dependsOn verifyNoTestScaffoldingInJar
+}
+
+// LICENSE jar 同梱（LICENSE は repo root にのみ置く。inputs.file で不在時に build を落とす）
+def licenseFile = file("../LICENSE")
+jar {
+    inputs.file(licenseFile)
+    from(licenseFile) {
+        rename { "${it}_${mod_id}" }
+    }
+}
