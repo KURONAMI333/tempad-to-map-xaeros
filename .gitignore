@@ -31,9 +31,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
-### 統括↔executor の作業文書（公開 repo に入れない）
-GAP_LOG.md
-_handoff/
 RELEASE_HANDOFF.md
 
 
@@ -59,7 +56,3 @@ branding/_cobblemon_assets/
 logs/
 *.log
 
-### 統括↔executor の作業文書（公開 repo に入れない） ###
-_handoff/
-GAP_LOG.md
-DESIGN_COMPILE.md
