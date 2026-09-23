@@ -1,22 +1,12 @@
-See every saved Tempad teleport location on Xaero's Minimap without copying coordinates by hand.
+Save a location in Tempad and it appears as a Xaero's Minimap waypoint. Rename, move, or delete the location in Tempad, and the waypoint follows.
 
-Tempad to Map keeps each player's Xaero's waypoints matched to their own Tempad locations. Creating, renaming, moving, or deleting a Tempad location updates the corresponding waypoint automatically within a few seconds.
+Only your own saved Tempad locations are synced. Changes go from Tempad to Xaero's Minimap; editing a waypoint on the map does not change Tempad. Locations in other dimensions appear when you enter those dimensions.
 
-## Features
+Requires [Tempad](https://www.curseforge.com/minecraft/mc-mods/tempad). Install [Xaero's Minimap](https://www.curseforge.com/minecraft/mc-mods/xaeros-minimap) to see the waypoints.
 
-- Adds Tempad locations as persistent Xaero's Minimap waypoints.
-- Syncs additions, changes, and removals automatically.
-- Sends only the current player's saved locations.
+<p><a href="https://www.patreon.com/KURONAMI333"><img src="https://raw.githubusercontent.com/KURONAMI333/music-disc-maker/6a0a895769575a1a58fd1fb6dfb15e259bcefccb/_docs/support/patreon.png" width="440" height="156" alt="Support my mods on Patreon"></a> <a href="https://x.com/kuronami333"><img src="https://raw.githubusercontent.com/KURONAMI333/music-disc-maker/6a0a895769575a1a58fd1fb6dfb15e259bcefccb/_docs/support/x.png" width="300" height="156" alt="Follow @kuronami333 on X"></a></p>
 
-## Dependencies
-
-[Tempad](https://modrinth.com/mod/tempad) 3.x is required. [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) is optional; without it, there is nowhere to display the synced waypoints.
-
-## Scope and limitations
-
-Synchronization is one-way from Tempad to Xaero's Minimap. Editing a Xaero's waypoint does not change Tempad. Xaero's Minimap exposes only the current dimension's waypoint set, so locations in other dimensions are applied when the player enters them.
-
-All Rights Reserved. Modpack inclusion is allowed without permission or credit.
+All Rights Reserved. Modpacks may include this addon without permission or credit.
 
 Bugs and questions: comment on the CurseForge page, or DM @kuronami333 on X.
 

@@ -1,0 +1,1 @@
+Turn saved Tempad locations into Xaero's Minimap waypoints that update when the locations change.
